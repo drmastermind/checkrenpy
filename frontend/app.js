@@ -1,13 +1,19 @@
-// State
+// -----------------------------
+// STATE
+// -----------------------------
+
 let allGames = [];
 let sortKey = 'name';
 let sortAsc = true;
 let activeFilter = 'all';
 let scanRunning = false;
-let scanUpdatedNames = new Set();  // version changed this session
-let scannedNames = new Set();      // scanned (checked) this session
+let scanUpdatedNames = new Set();  // games whose version changed this session
+let scannedNames = new Set();      // games checked (checkbox) this session
+let prevVersions = {};             // scraped_version snapshot before a bulk scan
 
-// ---- Boot ----
+// -----------------------------
+// BOOT
+// -----------------------------
 
 document.addEventListener('DOMContentLoaded', async () => {
     setupFilters();
@@ -20,14 +26,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadGames();
 });
 
-// ---- API ----
+// -----------------------------
+// API — server communication
+// -----------------------------
 
+/* Fetch all games from the server and render the tables. */
 async function loadGames() {
     const resp = await fetch('/games');
     allGames = await resp.json();
     renderTables();
 }
 
+/*
+ * Trigger a full scan via POST /scan, then open an SSE stream to receive
+ * per-game results as they arrive. Updates each row in-place as events come in.
+ * Guard flag prevents double-clicks from launching two concurrent scans.
+ */
 async function scanAll() {
     if (scanRunning) return;
     scanRunning = true;
@@ -51,6 +65,8 @@ async function scanAll() {
         const data = JSON.parse(e.data);
         if (data.type === 'result') {
             done++;
+            /* Compare against the snapshot taken before the scan started, not the
+               live allGames entry, which may already be mutated by a prior event. */
             const wasUpdated = data.game.scraped_version !== prevVersions[data.game.name]
                                && data.game.scraped_version != null;
             scannedNames.add(data.game.name);
@@ -73,8 +89,7 @@ async function scanAll() {
     };
 }
 
-let prevVersions = {};
-
+/* Reset scan UI state after a bulk scan completes or errors. */
 function finishScan(btn) {
     scanRunning = false;
     btn.disabled = false;
@@ -82,6 +97,7 @@ function finishScan(btn) {
     setStatus('Scan complete.');
 }
 
+/* Check a single game by name; highlight its row if the version changed. */
 async function scanOne(name) {
     const prev = allGames.find(g => g.name === name)?.scraped_version;
     const resp = await fetch(`/scan/${encodeURIComponent(name)}`, { method: 'POST' });
@@ -91,6 +107,7 @@ async function scanOne(name) {
     updateGame(game, wasUpdated);
 }
 
+/* Mark a game as played — resets needs_update and update_count on the server. */
 async function markPlayed(name) {
     const resp = await fetch(`/games/${encodeURIComponent(name)}/played`, { method: 'POST' });
     const game = await resp.json();
@@ -98,6 +115,7 @@ async function markPlayed(name) {
     updateGame(game, false);
 }
 
+/* PATCH arbitrary fields on a game (e.g. installed_version). */
 async function updateField(name, fields) {
     const resp = await fetch(`/games/${encodeURIComponent(name)}`, {
         method: 'PATCH',
@@ -112,6 +130,7 @@ async function updateField(name, fields) {
     }
 }
 
+/* Toggle whether a game is included in bulk scans. */
 async function toggleActive(name) {
     const resp = await fetch(`/games/${encodeURIComponent(name)}/toggle-active`, { method: 'POST' });
     if (resp.ok) {
@@ -120,6 +139,7 @@ async function toggleActive(name) {
     }
 }
 
+/* Delete a game after user confirmation. */
 async function deleteGame(name) {
     if (!confirm(`Delete "${name}"?`)) return;
     const resp = await fetch(`/games/${encodeURIComponent(name)}`, { method: 'DELETE' });
@@ -129,6 +149,7 @@ async function deleteGame(name) {
     }
 }
 
+/* Add a new game entry via the form, then append its row without a full re-render. */
 async function addGame(name, group, url) {
     const resp = await fetch('/games', {
         method: 'POST',
@@ -145,8 +166,15 @@ async function addGame(name, group, url) {
     renderTables();
 }
 
-// ---- State ----
+// -----------------------------
+// STATE UPDATES
+// -----------------------------
 
+/*
+ * Merge an updated game object into allGames, then patch the existing DOM row
+ * in-place. Falls back to a full re-render if the row isn't found (e.g. first
+ * appearance of a game).
+ */
 function updateGame(game, wasUpdated = false) {
     const idx = allGames.findIndex(g => g.name === game.name);
     if (idx >= 0) {
@@ -165,8 +193,14 @@ function updateGame(game, wasUpdated = false) {
     updateFilterCounts();
 }
 
-// ---- Render ----
+// -----------------------------
+// RENDER
+// -----------------------------
 
+/*
+ * Return the filtered + sorted game list.
+ * Inactive games always sort to the bottom regardless of the active sort column.
+ */
 function filteredAndSorted() {
     let games = [...allGames];
     switch (activeFilter) {
@@ -188,6 +222,7 @@ function filteredAndSorted() {
     return games;
 }
 
+/* Build one <section> per group and inject them into #games-container. */
 function renderTables() {
     const container = document.getElementById('games-container');
     container.innerHTML = '';
@@ -214,6 +249,7 @@ function renderTables() {
     updateFilterCounts();
 }
 
+/* Build a sortable <table> for a single group of games. */
 function buildTable(games) {
     const table = document.createElement('table');
 
@@ -240,6 +276,8 @@ function buildTable(games) {
                     sortAsc = !sortAsc;
                 } else {
                     sortKey = col.key;
+                    /* update_count sorts descending by default so the most-missed
+                       games appear at the top immediately on first click. */
                     sortAsc = col.key !== 'update_count';
                 }
                 renderTables();
@@ -259,6 +297,7 @@ function buildTable(games) {
     return table;
 }
 
+/* Build a single table row for a game. */
 function buildRow(game) {
     const tr = document.createElement('tr');
     tr.dataset.name = game.name;
@@ -268,7 +307,7 @@ function buildRow(game) {
     if (game.status === 'Abandoned') tr.classList.add('status-abandoned');
     if (game.status === 'Complete')  tr.classList.add('status-complete');
 
-    // Scan-done checkbox
+    // Scan-done indicator — checked once the game has been scanned this session
     const checkTd = document.createElement('td');
     checkTd.className = 'col-check';
     const cb = document.createElement('input');
@@ -278,20 +317,14 @@ function buildRow(game) {
     checkTd.appendChild(cb);
     tr.appendChild(checkTd);
 
-    // Name
     tr.appendChild(cell(game.name));
-
-    // Updates since last played
     tr.appendChild(cell(game.update_count > 0 ? `${game.update_count}x` : ''));
-
-    // Latest version
     tr.appendChild(cell(game.scraped_version ?? '—'));
 
-    // Release date — read only
     const dateStr = game.release_date ? game.release_date.substring(0, 10) : '—';
     tr.appendChild(cell(dateStr));
 
-    // URL link
+    // External link to the game page
     const linkTd = document.createElement('td');
     const a = document.createElement('a');
     a.href = game.url;
@@ -302,7 +335,7 @@ function buildRow(game) {
     linkTd.appendChild(a);
     tr.appendChild(linkTd);
 
-    // Active checkbox (from JSON field — toggles scan inclusion)
+    // Active toggle — controls whether the game is included in bulk scans
     const activeTd = document.createElement('td');
     activeTd.className = 'col-active';
     const activeCb = document.createElement('input');
@@ -313,7 +346,8 @@ function buildRow(game) {
     activeTd.appendChild(activeCb);
     tr.appendChild(activeTd);
 
-    // Actions — always three fixed-width slots; "Mark as Updated" hidden when not needed
+    // Actions — "Mark as Updated" uses visibility:hidden (not display:none) to
+    // keep column width stable whether or not the button is showing.
     const actionsTd = document.createElement('td');
     actionsTd.className = 'actions';
 
@@ -352,14 +386,18 @@ function buildRow(game) {
     return tr;
 }
 
+/* Create a plain <td> with text content. */
 function cell(text) {
     const td = document.createElement('td');
     td.textContent = text;
     return td;
 }
 
-// ---- Filters ----
+// -----------------------------
+// FILTERS
+// -----------------------------
 
+/* Wire filter buttons; clicking one sets activeFilter and re-renders. */
 function setupFilters() {
     document.querySelectorAll('.filter-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -371,6 +409,7 @@ function setupFilters() {
     });
 }
 
+/* Update the count badge on each filter button to reflect current allGames. */
 function updateFilterCounts() {
     const counts = {
         all:            allGames.length,
@@ -384,8 +423,11 @@ function updateFilterCounts() {
     });
 }
 
-// ---- Add Form ----
+// -----------------------------
+// ADD FORM
+// -----------------------------
 
+/* Handle the Add Game form submission. */
 function setupAddForm() {
     document.getElementById('add-form').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -397,7 +439,9 @@ function setupAddForm() {
     });
 }
 
-// ---- Status bar ----
+// -----------------------------
+// STATUS BAR
+// -----------------------------
 
 function setStatus(msg) {
     document.getElementById('scan-status').textContent = msg;
