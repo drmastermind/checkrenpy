@@ -1,0 +1,21 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+data/
+
+# Data files
+backend/games.json
+
+# Scratch / temp files
+backend/shit.md
+backend/crawl_test.py
+
+# Local Claude Code settings
+.claude/

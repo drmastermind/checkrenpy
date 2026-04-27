@@ -1,0 +1,11 @@
+**/__pycache__
+**/*.pyc
+**/*.pyo
+backend/games.json
+backend/games.tmp
+.venv
+.claude
+planning
+pyproject.toml
+uv.lock
+*.md
