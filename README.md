@@ -68,6 +68,9 @@ environment:
   - F95_COOKIE=your_xf_user_cookie_value
 ```
 
+Note: this is not necessary.  There's actually nothing in the current build that would even use anything from a logged in session.
+
+
 ## Running with Docker
 
 ```bash
