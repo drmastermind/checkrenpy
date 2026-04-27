@@ -16,6 +16,7 @@ backend/games.json
 # Scratch / temp files
 backend/shit.md
 backend/crawl_test.py
+*.tar
 
 # Local Claude Code settings
 .claude/
