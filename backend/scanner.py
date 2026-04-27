@@ -3,13 +3,15 @@
 # Purpose: Pure scraping logic — no file I/O. Returns dicts only.
 # Author: David Scott
 # Created: 2026-04-26
-# Updated: 2026-04-26
+# Updated: 2026-04-27
 #
 # Version History:
 #   v1.0 - Initial creation (BeautifulSoup).
 #   v1.1 - Switched to crawl4ai markdown; extracts Release Date by label.
 #   v1.2 - Reverted to requests + BeautifulSoup; target Release Date label
 #           directly in HTML so Thread Updated date is never picked up.
+#   v1.3 - Added _extract_modified_date fallback (meta tags, Thread Updated
+#           label, <time> elements) when no Release Date label is present.
 #
 # Dependencies:
 #   - requests        uv add requests
@@ -91,13 +93,39 @@ def _extract_release_date(soup: BeautifulSoup) -> str | None:
     # "Thread Updated" which appears nearby on F95zone pages.
     for tag in soup.find_all(["b", "strong"]):
         if re.search(r'release\s+date', tag.get_text(), re.IGNORECASE):
-            # Text immediately after the tag
             sibling = tag.next_sibling
             if sibling:
-                text = str(sibling)
-                m = re.search(r'(\d{4}-\d{2}-\d{2})', text)
+                m = re.search(r'(\d{4}-\d{2}-\d{2})', str(sibling))
                 if m:
                     return m.group(1)
+    return None
+
+
+def _extract_modified_date(soup: BeautifulSoup) -> str | None:
+    # 1. Standard meta tags (article:modified_time, og:updated_time, etc.)
+    for prop in ("article:modified_time", "og:updated_time", "article:published_time"):
+        tag = soup.find("meta", property=prop) or soup.find("meta", attrs={"name": prop})
+        if tag and tag.get("content"):
+            m = re.search(r'(\d{4}-\d{2}-\d{2})', tag["content"])
+            if m:
+                return m.group(1)
+
+    # 2. "Thread Updated" label — same bold-sibling pattern as Release Date
+    for tag in soup.find_all(["b", "strong"]):
+        if re.search(r'thread\s+updated', tag.get_text(), re.IGNORECASE):
+            sibling = tag.next_sibling
+            if sibling:
+                m = re.search(r'(\d{4}-\d{2}-\d{2})', str(sibling))
+                if m:
+                    return m.group(1)
+
+    # 3. Any <time> element with a parseable datetime attribute
+    for time_tag in soup.find_all("time"):
+        dt = time_tag.get("datetime", "")
+        m = re.search(r'(\d{4}-\d{2}-\d{2})', dt)
+        if m:
+            return m.group(1)
+
     return None
 
 # -----------------------------
@@ -106,9 +134,10 @@ def _extract_release_date(soup: BeautifulSoup) -> str | None:
 
 def scrape_game(url: str) -> dict:
     soup = _fetch_soup(url)
+    release_date = _extract_release_date(soup) or _extract_modified_date(soup)
     return {
         "scraped_version": _extract_version(soup),
-        "release_date":    _extract_release_date(soup),
+        "release_date":    release_date,
         "status":          _extract_status(soup),
     }
 
