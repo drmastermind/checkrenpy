@@ -19,3 +19,15 @@ backend/crawl_test.py
 
 # Local Claude Code settings
 .claude/
+
+# Environments
+.env
+.envrc
+env/
+venv/
+ENV/
+
+# Type checkers / tools
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
