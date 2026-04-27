@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>checkRenpy</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+    <h1>checkRenpy</h1>
+    <button id="btn-scan-all" class="btn btn-primary">Scan All</button>
+    <button id="btn-toggle-add" class="btn">+ Add Game</button>
+</header>
+
+<div id="add-panel" hidden>
+    <form id="add-form" class="add-form">
+        <input id="add-name" type="text" placeholder="Game name" required>
+        <select id="add-group">
+            <option value="Watching">Watching</option>
+            <option value="hold">Hold</option>
+        </select>
+        <input id="add-url" type="url" placeholder="URL" required>
+        <button type="submit" class="btn btn-primary">Add</button>
+    </form>
+</div>
+
+<div class="filters">
+    <button class="filter-btn active" data-filter="all">All <span class="filter-count">0</span></button>
+    <button class="filter-btn" data-filter="needs-update">Needs Update <span class="filter-count">0</span></button>
+    <button class="filter-btn" data-filter="abandoned">Abandoned <span class="filter-count">0</span></button>
+    <button class="filter-btn" data-filter="complete">Complete <span class="filter-count">0</span></button>
+    <button class="filter-btn" data-filter="errors">Errors <span class="filter-count">0</span></button>
+</div>
+
+<div id="scan-status"></div>
+
+<div id="games-container"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

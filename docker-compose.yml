@@ -1,0 +1,11 @@
+services:
+  checkrenpy:
+    build: .
+    ports:
+      - "8765:8765"
+    volumes:
+      - ./data/:/data
+    restart: unless-stopped
+
+volumes:
+  checkrenpy_data:
