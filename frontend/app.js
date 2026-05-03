@@ -1,4 +1,12 @@
 // -----------------------------
+// ICONS
+// -----------------------------
+
+const SVG_REFRESH = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>';
+const SVG_CHECK   = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+const SVG_TRASH   = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>';
+
+// -----------------------------
 // STATE
 // -----------------------------
 
@@ -49,6 +57,7 @@ async function scanAll() {
     prevVersions = Object.fromEntries(allGames.map(g => [g.name, g.scraped_version]));
     scanUpdatedNames.clear();
     scannedNames.clear();
+    document.querySelectorAll('td.col-check input[type="checkbox"]').forEach(cb => cb.checked = false);
 
     const btn = document.getElementById('btn-scan-all');
     btn.disabled = true;
@@ -352,18 +361,19 @@ function buildRow(game) {
     actionsTd.className = 'actions';
 
     const checkBtn = document.createElement('button');
-    checkBtn.textContent = 'Check';
-    checkBtn.className = 'btn btn-action';
+    checkBtn.innerHTML = SVG_REFRESH;
+    checkBtn.className = 'btn btn-icon';
+    checkBtn.title = 'Check for update';
     checkBtn.onclick = async () => {
         checkBtn.disabled = true;
-        checkBtn.textContent = '...';
         await scanOne(game.name);
     };
     actionsTd.appendChild(checkBtn);
 
     const markBtn = document.createElement('button');
-    markBtn.textContent = 'Mark as Updated';
-    markBtn.className = 'btn btn-action btn-mark-updated';
+    markBtn.innerHTML = SVG_CHECK;
+    markBtn.className = 'btn btn-icon btn-mark-updated';
+    markBtn.title = 'Mark as Played';
     markBtn.style.visibility = game.needs_update ? 'visible' : 'hidden';
     markBtn.onclick = () => markPlayed(game.name);
     actionsTd.appendChild(markBtn);
@@ -377,8 +387,9 @@ function buildRow(game) {
     }
 
     const deleteBtn = document.createElement('button');
-    deleteBtn.textContent = 'Delete';
-    deleteBtn.className = 'btn btn-action btn-delete';
+    deleteBtn.innerHTML = SVG_TRASH;
+    deleteBtn.className = 'btn btn-icon btn-delete';
+    deleteBtn.title = 'Delete Game';
     deleteBtn.onclick = () => deleteGame(game.name);
     actionsTd.appendChild(deleteBtn);
 
