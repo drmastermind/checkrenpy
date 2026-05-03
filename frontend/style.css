@@ -113,7 +113,7 @@ header h1 {
     font-weight: 600;
 }
 
-.btn-action       { font-size: 12px; padding: 3px 0; width: 118px; text-align: center; white-space: nowrap; flex-shrink: 0; }
+.btn-icon         { width: 30px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .btn-mark-updated { background: var(--badge-update-bg); color: var(--badge-update-fg); border-color: var(--badge-update-fg); }
 .btn-delete       { background: var(--badge-error-bg);  color: var(--badge-error-fg);  border-color: var(--badge-error-fg); }
 
@@ -192,13 +192,13 @@ table {
 
 /* Fixed column widths — applied to every group table so they all line up */
 table th:nth-child(1) { width: 3%;  }   /* Scan-done checkbox */
-table th:nth-child(2) { width: 28%; }   /* Name */
+table th:nth-child(2) { width: 36%; }   /* Name */
 table th:nth-child(3) { width: 14%; }   /* Updates Since Last Played */
 table th:nth-child(4) { width: 12%; }   /* Latest Version */
 table th:nth-child(5) { width: 11%; }   /* Release Date */
 table th:nth-child(6) { width: 4%;  }   /* URL */
 table th:nth-child(7) { width: 4%;  }   /* Active */
-table th:nth-child(8) { width: 24%; }   /* Actions (2 buttons) */
+table th:nth-child(8) { width: 16%; }   /* Actions (icon buttons) */
 
 td.col-check {
     text-align: center;
